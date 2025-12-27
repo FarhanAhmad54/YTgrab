@@ -530,97 +530,200 @@ async function handleDownload() {
     const quality = qualitySelect.value;
     const format = formatSelect.value;
     const url = urlInput.value.trim();
+    const videoId = currentVideoInfo.videoId;
 
     // Hide other states
     hideElement(errorContainer);
     hideElement(successContainer);
+    hideElement(progressContainer);
 
-    // Show progress
-    showElement(progressContainer);
-    updateProgress(0, 'Starting download...');
+    // Show download options modal/section
+    showDownloadOptions(videoId, url, currentVideoInfo.title);
+}
 
-    // Disable download button
-    downloadBtn.disabled = true;
-    downloadBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" class="spin">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.416" stroke-dashoffset="10"/>
-        </svg>
-        <span>Downloading...</span>
+// Show download options with external services
+function showDownloadOptions(videoId, url, title) {
+    // Create download services list
+    const services = [
+        {
+            name: '🎬 Y2Mate',
+            url: `https://www.y2mate.com/youtube/${videoId}`,
+            desc: 'Fast & reliable downloads'
+        },
+        {
+            name: '💾 SaveFrom',
+            url: `https://en.savefrom.net/1-youtube-video-downloader-4/?url=${encodeURIComponent(url)}`,
+            desc: 'Multiple formats available'
+        },
+        {
+            name: '🚀 SSYouTube',
+            url: `https://ssyoutube.com/watch?v=${videoId}`,
+            desc: 'HD quality downloads'
+        },
+        {
+            name: '⚡ 9xbuddy',
+            url: `https://9xbuddy.xyz/process?url=${encodeURIComponent(url)}`,
+            desc: 'Quick processing'
+        }
+    ];
+
+    // Create modal content
+    const modalHTML = `
+        <div id="downloadModal" class="download-modal show">
+            <div class="download-modal-content">
+                <div class="download-modal-header">
+                    <h3>📥 Choose Download Service</h3>
+                    <button class="download-modal-close" onclick="closeDownloadModal()">&times;</button>
+                </div>
+                <p class="download-modal-subtitle">${title || 'Your video'}</p>
+                <div class="download-services">
+                    ${services.map(s => `
+                        <a href="${s.url}" target="_blank" rel="noopener" class="download-service-btn" onclick="trackDownload()">
+                            <span class="service-name">${s.name}</span>
+                            <span class="service-desc">${s.desc}</span>
+                        </a>
+                    `).join('')}
+                </div>
+                <p class="download-modal-note">
+                    Click any service above to download. The service will open in a new tab.
+                </p>
+            </div>
+        </div>
     `;
 
-    try {
-        // Create download URL
-        const downloadUrl = `${API_BASE}/api/download?url=${encodeURIComponent(url)}&quality=${quality}&format=${format}`;
-
-        // Start download
-        const response = await fetch(downloadUrl);
-
-        // Check if blocked (429 status)
-        if (response.status === 429) {
-            const errorData = await response.json();
-            handleBlockedResponse(errorData);
-            hideElement(progressContainer);
-            return;
-        }
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Download failed');
-        }
-
-        // Get filename from Content-Disposition header
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = `${currentVideoInfo.title || 'video'}.${format}`;
-        if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-            if (filenameMatch && filenameMatch[1]) {
-                filename = filenameMatch[1].replace(/['"]/g, '');
+    // Add modal styles if not already present
+    if (!document.getElementById('downloadModalStyles')) {
+        const styles = document.createElement('style');
+        styles.id = 'downloadModalStyles';
+        styles.textContent = `
+            .download-modal {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.85);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 10000;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
             }
-        }
-
-        // Simulate progress (since we don't have streaming progress for simple fetch)
-        simulateProgress();
-
-        // Get the blob
-        const blob = await response.blob();
-
-        // Complete progress
-        updateProgress(100, 'Download complete!');
-
-        // Create download link
-        const downloadLink = document.createElement('a');
-        downloadLink.href = URL.createObjectURL(blob);
-        downloadLink.download = sanitizeFilename(filename);
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-        URL.revokeObjectURL(downloadLink.href);
-
-        // Save to download history
-        StorageManager.saveToHistory(currentVideoInfo);
-
-        // Show success
-        setTimeout(() => {
-            hideElement(progressContainer);
-            showElement(successContainer);
-        }, 500);
-
-    } catch (err) {
-        console.error('Download error:', err);
-        hideElement(progressContainer);
-        showError(err.message || 'Download failed. Please try again.');
-    } finally {
-        // Reset download button
-        downloadBtn.disabled = false;
-        downloadBtn.innerHTML = `
-            <svg viewBox="0 0 24 24" fill="none">
-                <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>Download Now</span>
+            .download-modal.show {
+                opacity: 1;
+                visibility: visible;
+            }
+            .download-modal-content {
+                background: linear-gradient(145deg, #1a1a2e, #16213e);
+                border-radius: 20px;
+                padding: 30px;
+                max-width: 500px;
+                width: 90%;
+                border: 1px solid rgba(255, 0, 85, 0.3);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            }
+            .download-modal-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+            .download-modal-header h3 {
+                color: #fff;
+                font-size: 1.5rem;
+                margin: 0;
+            }
+            .download-modal-close {
+                background: none;
+                border: none;
+                color: #888;
+                font-size: 2rem;
+                cursor: pointer;
+                transition: color 0.3s;
+            }
+            .download-modal-close:hover {
+                color: #ff0055;
+            }
+            .download-modal-subtitle {
+                color: #888;
+                margin-bottom: 20px;
+                font-size: 0.9rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .download-services {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .download-service-btn {
+                display: flex;
+                flex-direction: column;
+                padding: 15px 20px;
+                background: linear-gradient(145deg, rgba(255, 0, 85, 0.1), rgba(0, 212, 255, 0.1));
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                text-decoration: none;
+                transition: all 0.3s ease;
+            }
+            .download-service-btn:hover {
+                background: linear-gradient(145deg, rgba(255, 0, 85, 0.3), rgba(0, 212, 255, 0.2));
+                border-color: rgba(255, 0, 85, 0.5);
+                transform: translateY(-2px);
+            }
+            .service-name {
+                color: #fff;
+                font-size: 1.1rem;
+                font-weight: 600;
+                margin-bottom: 4px;
+            }
+            .service-desc {
+                color: #888;
+                font-size: 0.85rem;
+            }
+            .download-modal-note {
+                color: #666;
+                font-size: 0.8rem;
+                text-align: center;
+                margin-top: 20px;
+                margin-bottom: 0;
+            }
         `;
+        document.head.appendChild(styles);
     }
+
+    // Remove existing modal if any
+    const existingModal = document.getElementById('downloadModal');
+    if (existingModal) existingModal.remove();
+
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Close on backdrop click
+    document.getElementById('downloadModal').addEventListener('click', (e) => {
+        if (e.target.id === 'downloadModal') {
+            closeDownloadModal();
+        }
+    });
+
+    // Save to history
+    StorageManager.saveToHistory(currentVideoInfo);
+}
+
+function closeDownloadModal() {
+    const modal = document.getElementById('downloadModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+function trackDownload() {
+    // Track that user clicked a download link
+    console.log('Download initiated via external service');
 }
 
 // ============================================
