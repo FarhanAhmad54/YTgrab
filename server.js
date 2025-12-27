@@ -1,6 +1,6 @@
 /**
  * YTGrab - YouTube Video & Shorts Downloader
- * Express Server with OPTIMIZED Downloads using yt-dlp
+ * Express Server using @distube/ytdl-core (No external binaries needed!)
  * Enhanced with Advanced Security Features & Spam Protection
  */
 
@@ -11,10 +11,7 @@ const fs = require('fs');
 const os = require('os');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-
-// Configure yt-dlp with custom binary path for Render.com
-const ytdlpPath = process.env.YTDLP_PATH || '/opt/render/project/src/yt-dlp';
-const ytdlp = require('yt-dlp-exec').create(ytdlpPath);
+const ytdl = require('@distube/ytdl-core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -180,7 +177,7 @@ app.set('trust proxy', 1);
 // CORS - restrict to same origin in production
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? process.env.ALLOWED_ORIGIN || false
+        ? process.env.ALLOWED_ORIGIN || true
         : '*',
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type']
@@ -272,7 +269,7 @@ setInterval(cleanupTempFiles, 300000);
 // ============================================
 
 /**
- * GET /api/info - Fetch video info FAST
+ * GET /api/info - Fetch video info using ytdl-core
  */
 app.get('/api/info', async (req, res) => {
     try {
@@ -287,44 +284,49 @@ app.get('/api/info', async (req, res) => {
 
         console.log(`⚡ Info: ${url}`);
 
-        const info = await ytdlp(url, {
-            dumpSingleJson: true,
-            noCheckCertificates: true,
-            noWarnings: true,
-            skipDownload: true,
-            flatPlaylist: true
-        });
+        // Use ytdl-core to get video info
+        const info = await ytdl.getInfo(url);
+        const videoDetails = info.videoDetails;
 
         res.json({
             success: true,
-            videoId: info.id,
-            title: info.title,
-            channel: info.uploader || info.channel || 'Unknown',
-            channelUrl: info.uploader_url || info.channel_url || '',
-            duration: info.duration || 0,
-            views: info.view_count || 0,
-            likes: info.like_count || 0,
-            thumbnail: info.thumbnail || `https://img.youtube.com/vi/${info.id}/maxresdefault.jpg`,
-            description: (info.description || '').substring(0, 300),
-            isShort: (info.duration || 0) <= 60
+            videoId: videoDetails.videoId,
+            title: videoDetails.title,
+            channel: videoDetails.author?.name || videoDetails.ownerChannelName || 'Unknown',
+            channelUrl: videoDetails.author?.channel_url || '',
+            duration: parseInt(videoDetails.lengthSeconds) || 0,
+            views: parseInt(videoDetails.viewCount) || 0,
+            likes: 0, // ytdl-core doesn't provide likes
+            thumbnail: videoDetails.thumbnails?.[videoDetails.thumbnails.length - 1]?.url ||
+                `https://img.youtube.com/vi/${videoDetails.videoId}/maxresdefault.jpg`,
+            description: (videoDetails.description || '').substring(0, 300),
+            isShort: (parseInt(videoDetails.lengthSeconds) || 0) <= 60
         });
 
     } catch (error) {
         console.error('Info error:', error.message);
+
+        // Provide more helpful error messages
+        let errorMsg = 'Failed to fetch video info';
+        if (error.message.includes('Video unavailable')) {
+            errorMsg = 'This video is unavailable or private';
+        } else if (error.message.includes('Sign in')) {
+            errorMsg = 'This video requires sign-in to view';
+        } else if (error.message.includes('age')) {
+            errorMsg = 'This video is age-restricted';
+        }
+
         res.status(500).json({
             success: false,
-            error: 'Failed to fetch video info'
+            error: errorMsg
         });
     }
 });
 
 /**
- * GET /api/download - FAST Optimized Download
- * Uses pre-muxed formats (no merging = much faster!)
+ * GET /api/download - Download video using ytdl-core
  */
 app.get('/api/download', async (req, res) => {
-    let tempFile = null;
-
     try {
         const { url, quality = 'highest', format = 'mp4' } = req.query;
 
@@ -336,117 +338,113 @@ app.get('/api/download', async (req, res) => {
         }
 
         console.log(`⚡ DOWNLOAD: ${url} | ${quality} | ${format}`);
-        const startTime = Date.now();
 
-        // Get info for filename
-        const info = await ytdlp(url, {
-            dumpSingleJson: true,
-            noCheckCertificates: true,
-            noWarnings: true,
-            skipDownload: true
-        });
+        // Get video info first
+        const info = await ytdl.getInfo(url);
+        const videoDetails = info.videoDetails;
+        const sanitizedTitle = sanitizeFilename(videoDetails.title || 'video');
 
-        const sanitizedTitle = sanitizeFilename(info.title || 'video');
-        const tempId = Date.now();
+        // Set content type based on format
+        const isAudio = format === 'mp3';
+        const contentType = isAudio ? 'audio/mpeg' : 'video/mp4';
+        const fileExtension = isAudio ? 'mp3' : 'mp4';
+        const filename = `${sanitizedTitle}.${fileExtension}`;
 
-        let fileExtension, contentType, formatSpec;
+        // Configure download options
+        let downloadOptions = {};
 
-        if (format === 'mp3') {
-            fileExtension = 'mp3';
-            contentType = 'audio/mpeg';
-            formatSpec = 'bestaudio[ext=m4a]/bestaudio';
+        if (isAudio) {
+            // Audio only
+            downloadOptions = {
+                quality: 'highestaudio',
+                filter: 'audioonly'
+            };
         } else {
-            fileExtension = 'mp4';
-            contentType = 'video/mp4';
-            // KEY OPTIMIZATION: Use pre-muxed formats (no merging needed!)
-            // These formats already have video+audio combined
+            // Video with audio
             if (quality === 'highest') {
-                // best with both video and audio, preferring mp4
-                formatSpec = 'best[ext=mp4][vcodec*=avc]/best[ext=mp4]/best';
+                downloadOptions = {
+                    quality: 'highest',
+                    filter: (format) => format.container === 'mp4' && format.hasAudio && format.hasVideo
+                };
             } else {
-                formatSpec = `best[height<=${quality}][ext=mp4]/best[height<=${quality}]/best`;
+                const qualityNum = parseInt(quality);
+                downloadOptions = {
+                    quality: 'highest',
+                    filter: (format) => {
+                        if (format.container !== 'mp4') return false;
+                        if (!format.hasAudio || !format.hasVideo) return false;
+                        if (qualityNum && format.height > qualityNum) return false;
+                        return true;
+                    }
+                };
             }
         }
 
-        tempFile = path.join(TEMP_DIR, `${tempId}_${sanitizedTitle}`);
-        const outputTemplate = `${tempFile}.%(ext)s`;
+        // Try to find a suitable format, fallback to any available
+        let selectedFormat = ytdl.chooseFormat(info.formats, downloadOptions);
 
-        // Download with optimized settings
-        const ytdlpOptions = {
-            noCheckCertificates: true,
-            noWarnings: true,
-            noPlaylist: true,
-            format: formatSpec,
-            output: outputTemplate
-        };
-
-        if (format === 'mp3') {
-            ytdlpOptions.extractAudio = true;
-            ytdlpOptions.audioFormat = 'mp3';
-            ytdlpOptions.audioQuality = 0;
+        if (!selectedFormat) {
+            // Fallback: get any format with video and audio
+            selectedFormat = ytdl.chooseFormat(info.formats, {
+                quality: 'highest',
+                filter: 'audioandvideo'
+            });
         }
 
-        console.log(`Downloading with format: ${formatSpec}`);
-
-        // Try download - handle non-critical yt-dlp errors gracefully
-        let ytdlpError = null;
-        try {
-            await ytdlp(url, ytdlpOptions);
-        } catch (err) {
-            ytdlpError = err;
-            console.log(`yt-dlp warning (checking if file exists): ${err.message.substring(0, 100)}`);
+        if (!selectedFormat && !isAudio) {
+            // Second fallback: get highest quality video-only (no audio)
+            console.log('⚠️ No combined format found, using video-only');
+            selectedFormat = ytdl.chooseFormat(info.formats, {
+                quality: 'highestvideo',
+                filter: 'videoonly'
+            });
         }
 
-        // Find the downloaded file (may exist even if yt-dlp reported error)
-        const files = fs.readdirSync(TEMP_DIR);
-        const downloadedFile = files.find(f => f.startsWith(`${tempId}_`));
-
-        if (!downloadedFile) {
-            // File truly doesn't exist - throw the original error
-            throw ytdlpError || new Error('Download failed - file not found');
+        if (!selectedFormat) {
+            throw new Error('No suitable format found for download');
         }
 
-        const finalPath = path.join(TEMP_DIR, downloadedFile);
-        const actualExt = path.extname(downloadedFile).substring(1);
-        const stats = fs.statSync(finalPath);
+        console.log(`📥 Using format: ${selectedFormat.qualityLabel || selectedFormat.quality} (${selectedFormat.container})`);
 
-        const downloadTime = ((Date.now() - startTime) / 1000).toFixed(1);
-        const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
-        console.log(`✅ Complete in ${downloadTime}s: ${downloadedFile} (${sizeMB} MB)`);
-
-        // Send file
-        const downloadFilename = `${sanitizedTitle}.${actualExt}`;
+        // Set response headers
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Length', stats.size);
-        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(downloadFilename)}"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
 
-        const readStream = fs.createReadStream(finalPath);
+        if (selectedFormat.contentLength) {
+            res.setHeader('Content-Length', selectedFormat.contentLength);
+        }
 
-        readStream.on('end', () => {
-            setTimeout(() => {
-                try { fs.unlinkSync(finalPath); } catch (e) { }
-            }, 2000);
+        // Stream the video
+        const stream = ytdl.downloadFromInfo(info, { format: selectedFormat });
+
+        stream.on('error', (err) => {
+            console.error('Stream error:', err.message);
+            if (!res.headersSent) {
+                res.status(500).json({
+                    success: false,
+                    error: 'Download failed: ' + err.message
+                });
+            }
         });
 
-        readStream.pipe(res);
+        stream.pipe(res);
 
     } catch (error) {
         console.error('Download error:', error.message);
 
-        // Cleanup temp file on error
-        if (tempFile) {
-            try {
-                const files = fs.readdirSync(TEMP_DIR);
-                files.filter(f => f.includes(path.basename(tempFile))).forEach(f => {
-                    try { fs.unlinkSync(path.join(TEMP_DIR, f)); } catch (e) { }
-                });
-            } catch (e) { }
-        }
-
         if (!res.headersSent) {
+            let errorMsg = 'Download failed';
+            if (error.message.includes('Video unavailable')) {
+                errorMsg = 'This video is unavailable or private';
+            } else if (error.message.includes('Sign in')) {
+                errorMsg = 'This video requires sign-in to view';
+            } else if (error.message.includes('No suitable format')) {
+                errorMsg = 'No downloadable format available for this video';
+            }
+
             res.status(500).json({
                 success: false,
-                error: 'Download failed: ' + (error.message || 'Unknown error')
+                error: errorMsg
             });
         }
     }
@@ -477,7 +475,7 @@ app.get('/api/health', (req, res) => {
     res.json({
         success: true,
         status: 'healthy',
-        mode: 'optimized',
+        mode: 'ytdl-core',
         uptime: process.uptime(),
         blockedIPs: blockedIPs.size,
         trackedSessions: clickTracker.size
@@ -531,9 +529,6 @@ app.use('/api/download', (req, res, next) => {
     logActivity('download', `Download started`, ip);
     next();
 });
-
-// Override block logging
-const originalSpamProtection = spamProtection;
 
 /**
  * GET /api/admin/stats - Get dashboard statistics
@@ -703,13 +698,13 @@ app.listen(PORT, () => {
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║                                                ║');
     console.log('║     🎬 YTGrab - YouTube Video Downloader       ║');
-    console.log('║        ⚡ OPTIMIZED MODE (Fast Downloads)       ║');
+    console.log('║        ⚡ Using @distube/ytdl-core              ║');
     console.log('║        🛡️  Advanced Spam Protection Active      ║');
     console.log(`║     Server running at http://localhost:${PORT}     ║`);
     console.log('║                                                ║');
     console.log('╚════════════════════════════════════════════════╝');
     console.log('');
-    console.log('✨ Using pre-muxed formats for fastest downloads!');
+    console.log('✨ No external binaries needed - pure JavaScript!');
     console.log('🔒 Spam protection: Block IPs with >10 clicks/min for 1 hour');
     console.log('');
 });
