@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Download YouTube videos and shorts in HD quality. Fast, free, and easy to use YouTube video downloader.">
+    <meta name="keywords" content="YouTube downloader, video download, shorts download, HD video, MP4, MP3">
+    <title>YT Grab - YouTube Video & Shorts Downloader</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="bg-gradient"></div>
+        <div class="bg-particles" id="particles"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav container">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <span class="logo-text">YT<span class="logo-highlight">Grab</span></span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features" class="nav-link">Features</a></li>
+                <li><a href="#how-it-works" class="nav-link">How it Works</a></li>
+                <li><a href="#faq" class="nav-link">FAQ</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <main>
+        <section class="hero">
+            <div class="container">
+                <div class="hero-content">
+                    <div class="hero-badge animate-fade-in">
+                        <span class="badge-icon">⚡</span>
+                        <span>Fast & Free YouTube Downloads</span>
+                    </div>
+                    <h1 class="hero-title animate-slide-up">
+                        Download YouTube
+                        <span class="gradient-text">Videos & Shorts</span>
+                        <br>In Seconds
+                    </h1>
+                    <p class="hero-subtitle animate-slide-up delay-1">
+                        Grab any YouTube video or short in HD quality. No registration required.
+                        Just paste the link and download!
+                    </p>
+
+                    <!-- Download Form -->
+                    <div class="download-card animate-scale-in delay-2">
+                        <div class="input-wrapper">
+                            <div class="input-icon">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.479 3.53087C19.5519 2.60383 18.2979 2.07799 16.9869 2.0666C15.6759 2.0552 14.4129 2.55918 13.47 3.46997L11.75 5.17997"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path
+                                        d="M14 11C13.5705 10.4259 13.0226 9.95083 12.3934 9.60706C11.7642 9.26329 11.0684 9.05886 10.3533 9.00765C9.63816 8.95643 8.92037 9.05966 8.24861 9.3102C7.57685 9.56074 6.96684 9.95296 6.45996 10.46L3.45996 13.46C2.54917 14.403 2.04519 15.666 2.05659 16.977C2.06798 18.288 2.59382 19.542 3.52086 20.4691C4.4479 21.3961 5.70197 21.922 7.01295 21.9334C8.32393 21.9448 9.58694 21.4408 10.53 20.53L12.24 18.82"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                            </div>
+                            <input type="text" id="urlInput" class="url-input"
+                                placeholder="Paste YouTube video or shorts link here..." autocomplete="off">
+                            <button class="paste-btn" id="pasteBtn" title="Paste from clipboard">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path
+                                        d="M16 4H18C18.5304 4 19.0391 4.21071 19.4142 4.58579C19.7893 4.96086 20 5.46957 20 6V20C20 20.5304 19.7893 21.0391 19.4142 21.4142C19.0391 21.7893 18.5304 22 18 22H6C5.46957 22 4.96086 21.7893 4.58579 21.4142C4.21071 21.0391 4 20.5304 4 20V6C4 5.46957 4.21071 4.96086 4.58579 4.58579C4.96086 4.21071 5.46957 4 6 4H8"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <rect x="8" y="2" width="8" height="4" rx="1" stroke="currentColor"
+                                        stroke-width="2" />
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="fetch-btn" id="fetchBtn">
+                            <span class="btn-text">Get Video Info</span>
+                            <span class="btn-loader"></span>
+                            <svg class="btn-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Copyright Warning -->
+                    <div class="warning-banner animate-fade-in delay-3">
+                        <svg class="warning-icon" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 9V13M12 17H12.01M5.07183 19H18.9282C20.4678 19 21.4301 17.3333 20.6603 16L13.7321 4C12.9623 2.66667 11.0377 2.66667 10.2679 4L3.33975 16C2.56995 17.3333 3.53223 19 5.07183 19Z"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <p><strong>Important:</strong> Users are solely responsible for ensuring they have the right to
+                            download any content. Downloading copyrighted material without permission may be illegal in
+                            your jurisdiction.</p>
+                    </div>
+
+                    <!-- Terms Notice -->
+                    <div class="terms-notice animate-fade-in delay-3">
+                        <svg class="terms-icon" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="terms-content">
+                            <p><strong>Before You Download:</strong> Please take a moment to review our <a
+                                    href="terms-of-service.html">Terms of Service</a>, <a
+                                    href="privacy-policy.html">Privacy Policy</a>, and <a href="dmca.html">DMCA
+                                    Policy</a>. By using YT Grab, you agree to use this service responsibly and only for
+                                personal, non-commercial purposes.</p>
+                        </div>
+                    </div>
+
+                    <!-- Video Preview Card (Hidden by default) -->
+                    <div class="video-preview" id="videoPreview">
+                        <div class="preview-thumbnail">
+                            <img id="videoThumbnail" src="" alt="Video Thumbnail">
+                            <span class="video-duration" id="videoDuration">00:00</span>
+                        </div>
+                        <div class="preview-info">
+                            <h3 class="video-title" id="videoTitle">Video Title</h3>
+                            <p class="video-channel" id="videoChannel">Channel Name</p>
+                            <div class="video-meta">
+                                <span class="meta-item" id="videoViews">
+                                    <svg viewBox="0 0 24 24" fill="none">
+                                        <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"
+                                            stroke="currentColor" stroke-width="2" />
+                                        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                    0 views
+                                </span>
+                                <span class="meta-item" id="videoLikes">
+                                    <svg viewBox="0 0 24 24" fill="none">
+                                        <path
+                                            d="M14 9V5C14 4.20435 13.6839 3.44129 13.1213 2.87868C12.5587 2.31607 11.7956 2 11 2L7 10V22H18.28C18.7623 22.0055 19.2304 21.8364 19.5979 21.524C19.9654 21.2116 20.2077 20.7769 20.28 20.3L21.66 11.3C21.7035 11.0134 21.6842 10.7207 21.6033 10.4423C21.5225 10.1638 21.3821 9.90629 21.1919 9.68751C21.0016 9.46873 20.7661 9.29393 20.5016 9.17522C20.2371 9.0565 19.9499 8.99672 19.66 9H14Z"
+                                            stroke="currentColor" stroke-width="2" />
+                                        <path
+                                            d="M7 22H4C3.46957 22 2.96086 21.7893 2.58579 21.4142C2.21071 21.0391 2 20.5304 2 20V12C2 11.4696 2.21071 10.9609 2.58579 10.5858C2.96086 10.2107 3.46957 10 4 10H7"
+                                            stroke="currentColor" stroke-width="2" />
+                                    </svg>
+                                    0 likes
+                                </span>
+                            </div>
+
+                            <!-- Download Options -->
+                            <div class="download-options">
+                                <div class="option-group">
+                                    <label class="option-label">Quality</label>
+                                    <select id="qualitySelect" class="option-select">
+                                        <option value="highest">Highest Available</option>
+                                        <option value="1080">1080p HD</option>
+                                        <option value="720">720p HD</option>
+                                        <option value="480">480p</option>
+                                        <option value="360">360p</option>
+                                    </select>
+                                </div>
+                                <div class="option-group">
+                                    <label class="option-label">Format</label>
+                                    <select id="formatSelect" class="option-select">
+                                        <option value="mp4">MP4 (Video)</option>
+                                        <option value="mp3">MP3 (Audio)</option>
+                                        <option value="webm">WebM</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button class="download-btn" id="downloadBtn">
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                    <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" />
+                                    <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" />
+                                </svg>
+                                <span>Download Now</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar (Hidden by default) -->
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-header">
+                            <span class="progress-title">Downloading...</span>
+                            <span class="progress-percent" id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <p class="progress-status" id="progressStatus">Preparing download...</p>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div class="error-container" id="errorContainer">
+                        <div class="error-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                                <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <p class="error-message" id="errorMessage">An error occurred</p>
+                        <button class="error-dismiss" id="errorDismiss">Try Again</button>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div class="success-container" id="successContainer">
+                        <div class="success-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                                <path d="M8 12L11 15L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                        <p class="success-message">Download Complete!</p>
+                        <button class="success-dismiss" id="successDismiss">Download Another</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features" id="features">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-badge">Why Choose Us</span>
+                    <h2 class="section-title">Powerful <span class="gradient-text">Features</span></h2>
+                    <p class="section-subtitle">Everything you need to download YouTube content quickly and easily</p>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon lightning">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Lightning Fast</h3>
+                        <p class="feature-desc">Download videos at maximum speed with our optimized servers</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon quality">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <path d="M8 21H16M12 17V21" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">HD Quality</h3>
+                        <p class="feature-desc">Get videos in 4K, 1080p, 720p or any available quality</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon formats">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z"
+                                    stroke="currentColor" stroke-width="2" />
+                                <path d="M14 2V8H20M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Multiple Formats</h3>
+                        <p class="feature-desc">Download as MP4, MP3, WebM and more formats</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon shorts">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor"
+                                    stroke-width="2" />
+                                <circle cx="12" cy="18" r="1" fill="currentColor" />
+                                <path d="M10 9L14 12L10 15V9Z" fill="currentColor" />
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Shorts Support</h3>
+                        <p class="feature-desc">Download YouTube Shorts with same ease as regular videos</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon secure">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M12 22S20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor"
+                                    stroke-width="2" />
+                                <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">100% Secure</h3>
+                        <p class="feature-desc">No malware, no viruses. Safe and trusted by millions</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon free">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                                <path
+                                    d="M12 6V18M15 9.5C15 8.12 13.65 7 12 7C10.35 7 9 8.12 9 9.5C9 10.88 10.35 12 12 12C13.65 12 15 13.12 15 14.5C15 15.88 13.65 17 12 17C10.35 17 9 15.88 9 14.5"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Completely Free</h3>
+                        <p class="feature-desc">No hidden charges, no premium plans. Free forever</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section class="how-it-works" id="how-it-works">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-badge">Simple Process</span>
+                    <h2 class="section-title">How It <span class="gradient-text">Works</span></h2>
+                    <p class="section-subtitle">Download your favorite videos in just 3 simple steps</p>
+                </div>
+
+                <div class="steps-container">
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.479 3.53087C19.5519 2.60383 18.2979 2.07799 16.9869 2.0666C15.6759 2.0552 14.4129 2.55918 13.47 3.46997L11.75 5.17997"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path
+                                    d="M14 11C13.5705 10.4259 13.0226 9.95083 12.3934 9.60706C11.7642 9.26329 11.0684 9.05886 10.3533 9.00765C9.63816 8.95643 8.92037 9.05966 8.24861 9.3102C7.57685 9.56074 6.96684 9.95296 6.45996 10.46L3.45996 13.46C2.54917 14.403 2.04519 15.666 2.05659 16.977C2.06798 18.288 2.59382 19.542 3.52086 20.4691C4.4479 21.3961 5.70197 21.922 7.01295 21.9334C8.32393 21.9448 9.58694 21.4408 10.53 20.53L12.24 18.82"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                        <h3 class="step-title">Paste Link</h3>
+                        <p class="step-desc">Copy the YouTube video or shorts URL and paste it in the input box</p>
+                    </div>
+
+                    <div class="step-connector">
+                        <svg viewBox="0 0 100 20" preserveAspectRatio="none">
+                            <path d="M0 10 L100 10" stroke="currentColor" stroke-width="2" stroke-dasharray="5,5" />
+                            <path d="M90 5 L100 10 L90 15" stroke="currentColor" stroke-width="2" fill="none" />
+                        </svg>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" />
+                                <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" />
+                            </svg>
+                        </div>
+                        <h3 class="step-title">Select Quality</h3>
+                        <p class="step-desc">Choose your preferred video quality and format</p>
+                    </div>
+
+                    <div class="step-connector">
+                        <svg viewBox="0 0 100 20" preserveAspectRatio="none">
+                            <path d="M0 10 L100 10" stroke="currentColor" stroke-width="2" stroke-dasharray="5,5" />
+                            <path d="M90 5 L100 10 L90 15" stroke="currentColor" stroke-width="2" fill="none" />
+                        </svg>
+                    </div>
+
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <div class="step-icon">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                                <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                        <h3 class="step-title">Download</h3>
+                        <p class="step-desc">Click download and enjoy your video offline</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="faq" id="faq">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-badge">Got Questions?</span>
+                    <h2 class="section-title">Frequently Asked <span class="gradient-text">Questions</span></h2>
+                </div>
+
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            <span>Is YTGrab free to use?</span>
+                            <svg class="faq-icon" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes! YTGrab is completely free to use with no hidden charges or premium plans. Download
+                                as many videos as you want.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            <span>What video qualities are supported?</span>
+                            <svg class="faq-icon" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>We support all available qualities including 4K, 1080p, 720p, 480p, and 360p. The highest
+                                quality available for the video will be automatically detected.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            <span>Can I download YouTube Shorts?</span>
+                            <svg class="faq-icon" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Absolutely! YTGrab fully supports YouTube Shorts. Just paste the Shorts URL and download
+                                it like any regular video.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            <span>Is it safe to use?</span>
+                            <svg class="faq-icon" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>Yes, YTGrab is 100% safe. We don't store any of your data, and all downloads are
+                                processed securely. No malware or viruses.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            <span>What formats can I download?</span>
+                            <svg class="faq-icon" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>You can download videos in MP4 (most compatible), WebM, or extract audio only as MP3 for
+                                music and podcasts.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <button class="faq-question">
+                            <span>Do I need to create an account?</span>
+                            <svg class="faq-icon" viewBox="0 0 24 24" fill="none">
+                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" />
+                            </svg>
+                        </button>
+                        <div class="faq-answer">
+                            <p>No registration required! Just paste the URL and start downloading. It's that simple.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <a href="#" class="logo">
+                        <div class="logo-icon">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                        </div>
+                        <span class="logo-text">YT<span class="logo-highlight">Grab</span></span>
+                    </a>
+                    <p class="footer-desc">The fastest and easiest way to download YouTube videos and shorts in high
+                        quality.</p>
+                </div>
+
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#how-it-works">How It Works</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-links">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+                        <li><a href="terms-of-service.html">Terms of Service</a></li>
+                        <li><a href="dmca.html">DMCA</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2024 YTGrab. All rights reserved.</p>
+                <p class="disclaimer">This tool is for personal use only. Please respect copyright laws.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

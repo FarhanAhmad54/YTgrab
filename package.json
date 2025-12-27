@@ -1,0 +1,31 @@
+{
+  "name": "ytgrab",
+  "version": "1.0.0",
+  "description": "YouTube Video & Shorts Downloader - Fast, free, and easy to use",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "youtube",
+    "downloader",
+    "video",
+    "shorts",
+    "mp4",
+    "mp3"
+  ],
+  "author": "YTGrab",
+  "license": "MIT",
+  "dependencies": {
+    "@distube/ytdl-core": "^4.14.4",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "yt-dlp-exec": "^1.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
