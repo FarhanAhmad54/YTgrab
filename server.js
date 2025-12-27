@@ -1,6 +1,6 @@
 /**
  * YTGrab - YouTube Video & Shorts Downloader
- * Express Server using @distube/ytdl-core (No external binaries needed!)
+ * Express Server using Cobalt API (Reliable, no sign-in required!)
  * Enhanced with Advanced Security Features & Spam Protection
  */
 
@@ -11,16 +11,12 @@ const fs = require('fs');
 const os = require('os');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const ytdl = require('@distube/ytdl-core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Temp directory
-const TEMP_DIR = path.join(os.tmpdir(), 'ytgrab');
-if (!fs.existsSync(TEMP_DIR)) {
-    fs.mkdirSync(TEMP_DIR, { recursive: true });
-}
+// Cobalt API endpoint (public instance)
+const COBALT_API = 'https://api.cobalt.tools';
 
 // ============================================
 // Advanced Spam Protection System
@@ -86,7 +82,6 @@ function spamProtection(req, res, next) {
                 remainingMinutes
             });
         } else {
-            // Block expired, remove it
             blockedIPs.delete(ip);
         }
     }
@@ -97,19 +92,17 @@ function spamProtection(req, res, next) {
     } else {
         const data = clickTracker.get(ip);
 
-        // Reset if outside time window
         if (now - data.firstClick > SPAM_CONFIG.timeWindow) {
             clickTracker.set(ip, { clicks: 1, firstClick: now });
         } else {
             data.clicks++;
 
-            // Check if exceeds limit
             if (data.clicks > SPAM_CONFIG.maxClicks) {
                 const unblockTime = now + SPAM_CONFIG.blockDuration;
                 blockedIPs.set(ip, unblockTime);
                 clickTracker.delete(ip);
 
-                console.log(`⛔ BLOCKED IP for spam: ${ip.substring(0, 20)}... (${data.clicks} clicks in ${Math.round((now - data.firstClick) / 1000)}s)`);
+                console.log(`⛔ BLOCKED IP for spam: ${ip.substring(0, 20)}...`);
 
                 return res.status(429).json({
                     success: false,
@@ -128,16 +121,14 @@ function spamProtection(req, res, next) {
 // Security Configuration
 // ============================================
 
-// Helmet security headers (XSS protection, content-type sniffing, etc.)
 app.use(helmet({
-    contentSecurityPolicy: false, // Allow inline scripts for our SPA
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
 }));
 
-// Rate limiting - prevent abuse (30 requests per minute per IP)
 const apiLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 30, // 30 requests per minute
+    windowMs: 60 * 1000,
+    max: 30,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
@@ -147,20 +138,18 @@ const apiLimiter = rateLimit({
     skip: (req) => req.path === '/' || req.path.endsWith('.css') || req.path.endsWith('.js') || req.path.endsWith('.html')
 });
 
-// Download rate limiting - stricter (10 downloads per minute)
 const downloadLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 10, // 10 downloads per minute
+    windowMs: 60 * 1000,
+    max: 10,
     message: {
         success: false,
         error: 'Download limit reached. Please wait before downloading more videos.'
     }
 });
 
-// Strict limiter for info endpoint (prevents rapid scanning)
 const infoLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 15, // 15 info requests per minute
+    max: 15,
     message: {
         success: false,
         error: 'Too many video info requests. Please slow down.'
@@ -171,36 +160,26 @@ const infoLimiter = rateLimit({
 // Middleware
 // ============================================
 
-// Trust proxy (for accurate IP detection behind reverse proxy)
 app.set('trust proxy', 1);
 
-// CORS - restrict to same origin in production
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production'
-        ? process.env.ALLOWED_ORIGIN || true
-        : '*',
+    origin: true,
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type']
 }));
 
-// Request size limits (prevent DoS)
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ limit: '100kb', extended: true }));
 
-// Apply rate limiting to API routes
 app.use('/api/', apiLimiter);
 app.use('/api/info', infoLimiter);
 app.use('/api/download', downloadLimiter);
-
-// Apply spam protection to API routes
 app.use('/api/', spamProtection);
 
-// Static files
 app.use(express.static(path.join(__dirname)));
 
-// Request logging (sanitized)
 app.use((req, res, next) => {
-    const sanitizedUrl = req.url.substring(0, 200); // Limit log length
+    const sanitizedUrl = req.url.substring(0, 200);
     const ip = getClientIP(req).substring(0, 20);
     console.log(`[${new Date().toISOString()}] ${req.method} ${sanitizedUrl} (IP: ${ip}...)`);
     next();
@@ -211,7 +190,6 @@ app.use((req, res, next) => {
 // ============================================
 
 function isValidYouTubeUrl(url) {
-    // Sanitize input first
     if (!url || typeof url !== 'string' || url.length > 200) {
         return false;
     }
@@ -225,51 +203,124 @@ function isValidYouTubeUrl(url) {
     return patterns.some(pattern => pattern.test(url));
 }
 
+function extractVideoId(url) {
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/
+    ];
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+    }
+    return null;
+}
+
 function sanitizeFilename(filename) {
     return filename
-        // Remove emojis and special unicode characters
-        .replace(/[\u{1F600}-\u{1F64F}]/gu, '')  // Emoticons
-        .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')  // Symbols
-        .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')  // Transport
-        .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')  // Supplemental
-        .replace(/[\u{2600}-\u{26FF}]/gu, '')    // Misc symbols
-        .replace(/[\u{2700}-\u{27BF}]/gu, '')    // Dingbats
-        // Remove illegal filename characters and hashtags
+        .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
+        .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
+        .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
+        .replace(/[\u{1F900}-\u{1F9FF}]/gu, '')
+        .replace(/[\u{2600}-\u{26FF}]/gu, '')
+        .replace(/[\u{2700}-\u{27BF}]/gu, '')
         .replace(/[<>:"/\\|?*#@]/g, '')
-        // Replace multiple spaces/underscores
         .replace(/\s+/g, '_')
         .replace(/_+/g, '_')
-        // Remove leading/trailing underscores
         .replace(/^_|_$/g, '')
-        // Limit length
         .substring(0, 60) || 'video';
 }
 
-// Cleanup old temp files (older than 10 minutes)
-function cleanupTempFiles() {
-    try {
-        const files = fs.readdirSync(TEMP_DIR);
-        const now = Date.now();
-        files.forEach(file => {
-            const filePath = path.join(TEMP_DIR, file);
-            try {
-                const stat = fs.statSync(filePath);
-                if (now - stat.mtimeMs > 600000) {
-                    fs.unlinkSync(filePath);
-                    console.log(`Cleaned: ${file}`);
-                }
-            } catch (e) { }
-        });
-    } catch (e) { }
+// ============================================
+// YouTube oEmbed API for video info (no auth needed)
+// ============================================
+
+async function getVideoInfo(url) {
+    const videoId = extractVideoId(url);
+    if (!videoId) {
+        throw new Error('Invalid YouTube URL');
+    }
+
+    // Use YouTube's oEmbed API (public, no auth required)
+    const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+
+    const response = await fetch(oembedUrl);
+    if (!response.ok) {
+        throw new Error('Failed to fetch video info');
+    }
+
+    const data = await response.json();
+
+    return {
+        videoId,
+        title: data.title || 'Unknown Title',
+        channel: data.author_name || 'Unknown Channel',
+        channelUrl: data.author_url || '',
+        thumbnail: data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
+        duration: 0, // oEmbed doesn't provide duration
+        views: 0,
+        likes: 0,
+        description: '',
+        isShort: url.includes('/shorts/')
+    };
 }
-setInterval(cleanupTempFiles, 300000);
+
+// ============================================
+// Cobalt API Functions
+// ============================================
+
+async function getCobaltDownloadUrl(url, quality = 'highest', isAudio = false) {
+    const requestBody = {
+        url: url,
+        downloadMode: isAudio ? 'audio' : 'auto',
+        audioFormat: isAudio ? 'mp3' : 'best',
+        videoQuality: quality === 'highest' ? 'max' : quality.replace('p', ''),
+        filenameStyle: 'basic'
+    };
+
+    console.log(`📡 Cobalt API request:`, JSON.stringify(requestBody));
+
+    const response = await fetch(`${COBALT_API}/`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+    console.log(`📡 Cobalt API response:`, JSON.stringify(data));
+
+    if (data.status === 'error') {
+        throw new Error(data.error?.code || data.text || 'Download failed');
+    }
+
+    if (data.status === 'redirect' || data.status === 'tunnel') {
+        return {
+            url: data.url,
+            filename: data.filename || 'video.mp4'
+        };
+    }
+
+    if (data.status === 'picker') {
+        // Multiple options available, pick the first one
+        const firstOption = data.picker?.[0] || data.audio;
+        if (firstOption?.url) {
+            return {
+                url: firstOption.url,
+                filename: 'video.mp4'
+            };
+        }
+    }
+
+    throw new Error('No download URL received');
+}
 
 // ============================================
 // API Routes
 // ============================================
 
 /**
- * GET /api/info - Fetch video info using ytdl-core
+ * GET /api/info - Fetch video info using YouTube oEmbed
  */
 app.get('/api/info', async (req, res) => {
     try {
@@ -284,47 +335,24 @@ app.get('/api/info', async (req, res) => {
 
         console.log(`⚡ Info: ${url}`);
 
-        // Use ytdl-core to get video info
-        const info = await ytdl.getInfo(url);
-        const videoDetails = info.videoDetails;
+        const info = await getVideoInfo(url);
 
         res.json({
             success: true,
-            videoId: videoDetails.videoId,
-            title: videoDetails.title,
-            channel: videoDetails.author?.name || videoDetails.ownerChannelName || 'Unknown',
-            channelUrl: videoDetails.author?.channel_url || '',
-            duration: parseInt(videoDetails.lengthSeconds) || 0,
-            views: parseInt(videoDetails.viewCount) || 0,
-            likes: 0, // ytdl-core doesn't provide likes
-            thumbnail: videoDetails.thumbnails?.[videoDetails.thumbnails.length - 1]?.url ||
-                `https://img.youtube.com/vi/${videoDetails.videoId}/maxresdefault.jpg`,
-            description: (videoDetails.description || '').substring(0, 300),
-            isShort: (parseInt(videoDetails.lengthSeconds) || 0) <= 60
+            ...info
         });
 
     } catch (error) {
         console.error('Info error:', error.message);
-
-        // Provide more helpful error messages
-        let errorMsg = 'Failed to fetch video info';
-        if (error.message.includes('Video unavailable')) {
-            errorMsg = 'This video is unavailable or private';
-        } else if (error.message.includes('Sign in')) {
-            errorMsg = 'This video requires sign-in to view';
-        } else if (error.message.includes('age')) {
-            errorMsg = 'This video is age-restricted';
-        }
-
         res.status(500).json({
             success: false,
-            error: errorMsg
+            error: error.message || 'Failed to fetch video info'
         });
     }
 });
 
 /**
- * GET /api/download - Download video using ytdl-core
+ * GET /api/download - Get download URL using Cobalt API
  */
 app.get('/api/download', async (req, res) => {
     try {
@@ -339,112 +367,67 @@ app.get('/api/download', async (req, res) => {
 
         console.log(`⚡ DOWNLOAD: ${url} | ${quality} | ${format}`);
 
-        // Get video info first
-        const info = await ytdl.getInfo(url);
-        const videoDetails = info.videoDetails;
-        const sanitizedTitle = sanitizeFilename(videoDetails.title || 'video');
-
-        // Set content type based on format
         const isAudio = format === 'mp3';
+
+        // Get download URL from Cobalt API
+        const downloadInfo = await getCobaltDownloadUrl(url, quality, isAudio);
+
+        console.log(`📥 Got download URL: ${downloadInfo.url.substring(0, 50)}...`);
+
+        // Fetch the video from Cobalt's URL and stream to client
+        const videoResponse = await fetch(downloadInfo.url);
+
+        if (!videoResponse.ok) {
+            throw new Error('Failed to download from source');
+        }
+
+        // Get video info for filename
+        const videoId = extractVideoId(url);
+        let filename = downloadInfo.filename || `video_${videoId}.${format}`;
+
+        try {
+            const info = await getVideoInfo(url);
+            filename = `${sanitizeFilename(info.title)}.${format}`;
+        } catch (e) {
+            // Use default filename if info fails
+        }
+
+        // Set headers
         const contentType = isAudio ? 'audio/mpeg' : 'video/mp4';
-        const fileExtension = isAudio ? 'mp3' : 'mp4';
-        const filename = `${sanitizedTitle}.${fileExtension}`;
-
-        // Configure download options
-        let downloadOptions = {};
-
-        if (isAudio) {
-            // Audio only
-            downloadOptions = {
-                quality: 'highestaudio',
-                filter: 'audioonly'
-            };
-        } else {
-            // Video with audio
-            if (quality === 'highest') {
-                downloadOptions = {
-                    quality: 'highest',
-                    filter: (format) => format.container === 'mp4' && format.hasAudio && format.hasVideo
-                };
-            } else {
-                const qualityNum = parseInt(quality);
-                downloadOptions = {
-                    quality: 'highest',
-                    filter: (format) => {
-                        if (format.container !== 'mp4') return false;
-                        if (!format.hasAudio || !format.hasVideo) return false;
-                        if (qualityNum && format.height > qualityNum) return false;
-                        return true;
-                    }
-                };
-            }
-        }
-
-        // Try to find a suitable format, fallback to any available
-        let selectedFormat = ytdl.chooseFormat(info.formats, downloadOptions);
-
-        if (!selectedFormat) {
-            // Fallback: get any format with video and audio
-            selectedFormat = ytdl.chooseFormat(info.formats, {
-                quality: 'highest',
-                filter: 'audioandvideo'
-            });
-        }
-
-        if (!selectedFormat && !isAudio) {
-            // Second fallback: get highest quality video-only (no audio)
-            console.log('⚠️ No combined format found, using video-only');
-            selectedFormat = ytdl.chooseFormat(info.formats, {
-                quality: 'highestvideo',
-                filter: 'videoonly'
-            });
-        }
-
-        if (!selectedFormat) {
-            throw new Error('No suitable format found for download');
-        }
-
-        console.log(`📥 Using format: ${selectedFormat.qualityLabel || selectedFormat.quality} (${selectedFormat.container})`);
-
-        // Set response headers
         res.setHeader('Content-Type', contentType);
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
 
-        if (selectedFormat.contentLength) {
-            res.setHeader('Content-Length', selectedFormat.contentLength);
+        const contentLength = videoResponse.headers.get('content-length');
+        if (contentLength) {
+            res.setHeader('Content-Length', contentLength);
         }
 
-        // Stream the video
-        const stream = ytdl.downloadFromInfo(info, { format: selectedFormat });
+        // Stream the response
+        const reader = videoResponse.body.getReader();
 
-        stream.on('error', (err) => {
-            console.error('Stream error:', err.message);
-            if (!res.headersSent) {
-                res.status(500).json({
-                    success: false,
-                    error: 'Download failed: ' + err.message
-                });
+        const stream = new ReadableStream({
+            async start(controller) {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    controller.enqueue(value);
+                }
+                controller.close();
             }
         });
 
-        stream.pipe(res);
+        // Convert to Node stream and pipe
+        const nodeStream = require('stream');
+        const readable = nodeStream.Readable.fromWeb(stream);
+        readable.pipe(res);
 
     } catch (error) {
         console.error('Download error:', error.message);
 
         if (!res.headersSent) {
-            let errorMsg = 'Download failed';
-            if (error.message.includes('Video unavailable')) {
-                errorMsg = 'This video is unavailable or private';
-            } else if (error.message.includes('Sign in')) {
-                errorMsg = 'This video requires sign-in to view';
-            } else if (error.message.includes('No suitable format')) {
-                errorMsg = 'No downloadable format available for this video';
-            }
-
             res.status(500).json({
                 success: false,
-                error: errorMsg
+                error: error.message || 'Download failed'
             });
         }
     }
@@ -475,7 +458,7 @@ app.get('/api/health', (req, res) => {
     res.json({
         success: true,
         status: 'healthy',
-        mode: 'ytdl-core',
+        mode: 'cobalt-api',
         uptime: process.uptime(),
         blockedIPs: blockedIPs.size,
         trackedSessions: clickTracker.size
@@ -486,11 +469,9 @@ app.get('/api/health', (req, res) => {
 // Admin API Routes
 // ============================================
 
-// Activity log storage (in-memory, last 100 entries)
 const activityLog = [];
 const MAX_ACTIVITY_LOG = 100;
 
-// Statistics counters
 const stats = {
     totalRequests: 0,
     totalDownloads: 0,
@@ -498,7 +479,6 @@ const stats = {
     serverStartTime: Date.now()
 };
 
-// Log activity helper
 function logActivity(type, message, ip = null) {
     activityLog.unshift({
         type,
@@ -507,36 +487,28 @@ function logActivity(type, message, ip = null) {
         timestamp: new Date().toISOString()
     });
 
-    // Keep only last 100 entries
     if (activityLog.length > MAX_ACTIVITY_LOG) {
         activityLog.pop();
     }
 }
 
-// Track requests middleware (add after other middleware)
 app.use('/api/info', (req, res, next) => {
     stats.totalRequests++;
     stats.totalInfoRequests++;
-    const ip = getClientIP(req);
-    logActivity('info', `Video info requested`, ip);
+    logActivity('info', `Video info requested`, getClientIP(req));
     next();
 });
 
 app.use('/api/download', (req, res, next) => {
     stats.totalRequests++;
     stats.totalDownloads++;
-    const ip = getClientIP(req);
-    logActivity('download', `Download started`, ip);
+    logActivity('download', `Download started`, getClientIP(req));
     next();
 });
 
-/**
- * GET /api/admin/stats - Get dashboard statistics
- */
 app.get('/api/admin/stats', (req, res) => {
     try {
         const memUsage = process.memoryUsage();
-
         res.json({
             success: true,
             stats: {
@@ -555,9 +527,6 @@ app.get('/api/admin/stats', (req, res) => {
     }
 });
 
-/**
- * GET /api/admin/blocked - Get list of blocked IPs
- */
 app.get('/api/admin/blocked', (req, res) => {
     try {
         const blocked = [];
@@ -571,18 +540,13 @@ app.get('/api/admin/blocked', (req, res) => {
             });
         }
 
-        // Sort by remaining time
         blocked.sort((a, b) => new Date(a.unblockTime) - new Date(b.unblockTime));
-
         res.json({ success: true, blocked });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-/**
- * POST /api/admin/unblock - Unblock an IP address
- */
 app.post('/api/admin/unblock', (req, res) => {
     try {
         const { ip } = req.body;
@@ -594,7 +558,6 @@ app.post('/api/admin/unblock', (req, res) => {
         if (blockedIPs.has(ip)) {
             blockedIPs.delete(ip);
             logActivity('unblock', `IP manually unblocked: ${ip.substring(0, 15)}***`);
-            console.log(`✅ Admin manually unblocked IP: ${ip.substring(0, 20)}...`);
             res.json({ success: true, message: 'IP unblocked successfully' });
         } else {
             res.status(404).json({ success: false, error: 'IP not found in blocked list' });
@@ -604,9 +567,6 @@ app.post('/api/admin/unblock', (req, res) => {
     }
 });
 
-/**
- * GET /api/admin/sessions - Get active sessions
- */
 app.get('/api/admin/sessions', (req, res) => {
     try {
         const sessions = [];
@@ -620,18 +580,13 @@ app.get('/api/admin/sessions', (req, res) => {
             });
         }
 
-        // Sort by clicks (highest first)
         sessions.sort((a, b) => b.clicks - a.clicks);
-
         res.json({ success: true, sessions });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
 
-/**
- * GET /api/admin/activity - Get recent activity log
- */
 app.get('/api/admin/activity', (req, res) => {
     try {
         res.json({ success: true, activity: activityLog.slice(0, 50) });
@@ -640,12 +595,9 @@ app.get('/api/admin/activity', (req, res) => {
     }
 });
 
-/**
- * POST /api/admin/block - Manually block an IP
- */
 app.post('/api/admin/block', (req, res) => {
     try {
-        const { ip, duration = 60 } = req.body; // duration in minutes
+        const { ip, duration = 60 } = req.body;
 
         if (!ip) {
             return res.status(400).json({ success: false, error: 'IP address required' });
@@ -654,7 +606,6 @@ app.post('/api/admin/block', (req, res) => {
         const unblockTime = Date.now() + (duration * 60 * 1000);
         blockedIPs.set(ip, unblockTime);
         logActivity('block', `IP manually blocked for ${duration} min: ${ip.substring(0, 15)}***`);
-        console.log(`⛔ Admin manually blocked IP: ${ip.substring(0, 20)}... for ${duration} minutes`);
 
         res.json({
             success: true,
@@ -666,15 +617,11 @@ app.post('/api/admin/block', (req, res) => {
     }
 });
 
-/**
- * POST /api/admin/clear-blocks - Clear all blocked IPs
- */
 app.post('/api/admin/clear-blocks', (req, res) => {
     try {
         const count = blockedIPs.size;
         blockedIPs.clear();
         logActivity('unblock', `All ${count} blocked IPs cleared by admin`);
-        console.log(`✅ Admin cleared all ${count} blocked IPs`);
         res.json({ success: true, message: `Cleared ${count} blocked IPs` });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -698,20 +645,19 @@ app.listen(PORT, () => {
     console.log('╔════════════════════════════════════════════════╗');
     console.log('║                                                ║');
     console.log('║     🎬 YTGrab - YouTube Video Downloader       ║');
-    console.log('║        ⚡ Using @distube/ytdl-core              ║');
+    console.log('║        ⚡ Using Cobalt API                      ║');
     console.log('║        🛡️  Advanced Spam Protection Active      ║');
     console.log(`║     Server running at http://localhost:${PORT}     ║`);
     console.log('║                                                ║');
     console.log('╚════════════════════════════════════════════════╝');
     console.log('');
-    console.log('✨ No external binaries needed - pure JavaScript!');
-    console.log('🔒 Spam protection: Block IPs with >10 clicks/min for 1 hour');
+    console.log('✨ Reliable downloads - No sign-in required!');
+    console.log('🔒 Spam protection active');
     console.log('');
 });
 
 process.on('SIGINT', () => {
     console.log('\nShutting down...');
-    cleanupTempFiles();
     process.exit(0);
 });
 
