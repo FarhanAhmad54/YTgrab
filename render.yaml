@@ -1,0 +1,14 @@
+# YTGrab - Render.com Configuration
+# This file configures the deployment on Render.com
+
+services:
+  - type: web
+    name: ytgrab
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: YTDLP_PATH
+        value: /opt/render/project/src/yt-dlp

@@ -9,9 +9,12 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const ytdlp = require('yt-dlp-exec');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+
+// Configure yt-dlp with custom binary path for Render.com
+const ytdlpPath = process.env.YTDLP_PATH || '/opt/render/project/src/yt-dlp';
+const ytdlp = require('yt-dlp-exec').create(ytdlpPath);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
