@@ -481,6 +481,208 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// ============================================
+// Admin API Routes
+// ============================================
+
+// Activity log storage (in-memory, last 100 entries)
+const activityLog = [];
+const MAX_ACTIVITY_LOG = 100;
+
+// Statistics counters
+const stats = {
+    totalRequests: 0,
+    totalDownloads: 0,
+    totalInfoRequests: 0,
+    serverStartTime: Date.now()
+};
+
+// Log activity helper
+function logActivity(type, message, ip = null) {
+    activityLog.unshift({
+        type,
+        message,
+        ip: ip ? ip.substring(0, 15) + '***' : null,
+        timestamp: new Date().toISOString()
+    });
+
+    // Keep only last 100 entries
+    if (activityLog.length > MAX_ACTIVITY_LOG) {
+        activityLog.pop();
+    }
+}
+
+// Track requests middleware (add after other middleware)
+app.use('/api/info', (req, res, next) => {
+    stats.totalRequests++;
+    stats.totalInfoRequests++;
+    const ip = getClientIP(req);
+    logActivity('info', `Video info requested`, ip);
+    next();
+});
+
+app.use('/api/download', (req, res, next) => {
+    stats.totalRequests++;
+    stats.totalDownloads++;
+    const ip = getClientIP(req);
+    logActivity('download', `Download started`, ip);
+    next();
+});
+
+// Override block logging
+const originalSpamProtection = spamProtection;
+
+/**
+ * GET /api/admin/stats - Get dashboard statistics
+ */
+app.get('/api/admin/stats', (req, res) => {
+    try {
+        const memUsage = process.memoryUsage();
+
+        res.json({
+            success: true,
+            stats: {
+                uptime: process.uptime(),
+                totalRequests: stats.totalRequests,
+                totalDownloads: stats.totalDownloads,
+                totalInfoRequests: stats.totalInfoRequests,
+                blockedIPs: blockedIPs.size,
+                activeSessions: clickTracker.size,
+                memoryUsage: memUsage.heapUsed,
+                serverStartTime: new Date(stats.serverStartTime).toISOString()
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/admin/blocked - Get list of blocked IPs
+ */
+app.get('/api/admin/blocked', (req, res) => {
+    try {
+        const blocked = [];
+        const now = Date.now();
+
+        for (const [ip, unblockTime] of blockedIPs.entries()) {
+            blocked.push({
+                ip,
+                unblockTime: new Date(unblockTime).toISOString(),
+                remainingMinutes: Math.ceil((unblockTime - now) / 60000)
+            });
+        }
+
+        // Sort by remaining time
+        blocked.sort((a, b) => new Date(a.unblockTime) - new Date(b.unblockTime));
+
+        res.json({ success: true, blocked });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/admin/unblock - Unblock an IP address
+ */
+app.post('/api/admin/unblock', (req, res) => {
+    try {
+        const { ip } = req.body;
+
+        if (!ip) {
+            return res.status(400).json({ success: false, error: 'IP address required' });
+        }
+
+        if (blockedIPs.has(ip)) {
+            blockedIPs.delete(ip);
+            logActivity('unblock', `IP manually unblocked: ${ip.substring(0, 15)}***`);
+            console.log(`✅ Admin manually unblocked IP: ${ip.substring(0, 20)}...`);
+            res.json({ success: true, message: 'IP unblocked successfully' });
+        } else {
+            res.status(404).json({ success: false, error: 'IP not found in blocked list' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/admin/sessions - Get active sessions
+ */
+app.get('/api/admin/sessions', (req, res) => {
+    try {
+        const sessions = [];
+
+        for (const [ip, data] of clickTracker.entries()) {
+            sessions.push({
+                ip,
+                clicks: data.clicks,
+                firstClick: new Date(data.firstClick).toISOString(),
+                timeInWindow: Math.round((Date.now() - data.firstClick) / 1000)
+            });
+        }
+
+        // Sort by clicks (highest first)
+        sessions.sort((a, b) => b.clicks - a.clicks);
+
+        res.json({ success: true, sessions });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * GET /api/admin/activity - Get recent activity log
+ */
+app.get('/api/admin/activity', (req, res) => {
+    try {
+        res.json({ success: true, activity: activityLog.slice(0, 50) });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/admin/block - Manually block an IP
+ */
+app.post('/api/admin/block', (req, res) => {
+    try {
+        const { ip, duration = 60 } = req.body; // duration in minutes
+
+        if (!ip) {
+            return res.status(400).json({ success: false, error: 'IP address required' });
+        }
+
+        const unblockTime = Date.now() + (duration * 60 * 1000);
+        blockedIPs.set(ip, unblockTime);
+        logActivity('block', `IP manually blocked for ${duration} min: ${ip.substring(0, 15)}***`);
+        console.log(`⛔ Admin manually blocked IP: ${ip.substring(0, 20)}... for ${duration} minutes`);
+
+        res.json({
+            success: true,
+            message: `IP blocked for ${duration} minutes`,
+            unblockTime: new Date(unblockTime).toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
+ * POST /api/admin/clear-blocks - Clear all blocked IPs
+ */
+app.post('/api/admin/clear-blocks', (req, res) => {
+    try {
+        const count = blockedIPs.size;
+        blockedIPs.clear();
+        logActivity('unblock', `All ${count} blocked IPs cleared by admin`);
+        console.log(`✅ Admin cleared all ${count} blocked IPs`);
+        res.json({ success: true, message: `Cleared ${count} blocked IPs` });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // Fallback routes
 app.use('/api/*', (req, res) => {
     res.status(404).json({ success: false, error: 'Not found' });

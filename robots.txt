@@ -9,5 +9,9 @@ Allow: /dmca.html
 # Block API endpoints from indexing
 Disallow: /api/
 
+# Block admin page from indexing
+Disallow: /admin.html
+
 # Sitemap location
 Sitemap: https://ytgrab.netlify.app/sitemap.xml
+
