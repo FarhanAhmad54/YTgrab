@@ -27,11 +27,19 @@ const errorDismiss = document.getElementById('errorDismiss');
 const successContainer = document.getElementById('successContainer');
 const successDismiss = document.getElementById('successDismiss');
 
+// Blocked Modal Elements
+const blockedModal = document.getElementById('blockedModal');
+const blockedTimeRemaining = document.getElementById('blockedTimeRemaining');
+const blockedModalClose = document.getElementById('blockedModalClose');
+
 // API Base URL
 const API_BASE = window.location.origin;
 
 // Current video data
 let currentVideoInfo = null;
+
+// Blocked status
+let isUserBlocked = false;
 
 // ============================================
 // Storage Manager - Local Storage with Weekly Cleanup
@@ -202,6 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initParticles();
     initFAQ();
     initEventListeners();
+    checkBlockedStatus(); // Check if user is blocked on page load
 });
 
 // ============================================
@@ -309,6 +318,22 @@ function initEventListeners() {
             }
         });
     });
+
+    // Blocked modal close button
+    if (blockedModalClose) {
+        blockedModalClose.addEventListener('click', () => {
+            hideBlockedModal();
+        });
+    }
+
+    // Close modal on overlay click
+    if (blockedModal) {
+        blockedModal.addEventListener('click', (e) => {
+            if (e.target === blockedModal) {
+                hideBlockedModal();
+            }
+        });
+    }
 }
 
 // ============================================
@@ -364,6 +389,12 @@ function extractVideoId(url) {
 async function handleFetchVideo() {
     const url = urlInput.value.trim();
 
+    // Check if blocked
+    if (isUserBlocked) {
+        showBlockedModal();
+        return;
+    }
+
     // Validation
     if (!url) {
         showError('Please enter a YouTube video URL');
@@ -388,6 +419,12 @@ async function handleFetchVideo() {
     try {
         const response = await fetch(`${API_BASE}/api/info?url=${encodeURIComponent(url)}`);
         const data = await response.json();
+
+        // Check if blocked (429 status)
+        if (response.status === 429) {
+            handleBlockedResponse(data);
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(data.error || 'Failed to fetch video information');
@@ -479,6 +516,12 @@ function populateQualityOptions(formats) {
 // Handle Download
 // ============================================
 async function handleDownload() {
+    // Check if blocked
+    if (isUserBlocked) {
+        showBlockedModal();
+        return;
+    }
+
     if (!currentVideoInfo) {
         showError('Please fetch video information first');
         return;
@@ -511,6 +554,14 @@ async function handleDownload() {
 
         // Start download
         const response = await fetch(downloadUrl);
+
+        // Check if blocked (429 status)
+        if (response.status === 429) {
+            const errorData = await response.json();
+            handleBlockedResponse(errorData);
+            hideElement(progressContainer);
+            return;
+        }
 
         if (!response.ok) {
             const error = await response.json();
@@ -600,6 +651,64 @@ function updateProgress(percent, status) {
 function showError(message) {
     errorMessage.textContent = message;
     showElement(errorContainer);
+}
+
+// ============================================
+// Blocked Modal Functions
+// ============================================
+function showBlockedModal(remainingMinutes) {
+    if (blockedModal && blockedTimeRemaining) {
+        blockedTimeRemaining.textContent = remainingMinutes || 60;
+        blockedModal.classList.add('show');
+        isUserBlocked = true;
+
+        // Store blocked state in localStorage
+        const unblockTime = Date.now() + (remainingMinutes * 60 * 1000);
+        localStorage.setItem('ytgrab_blocked_until', unblockTime.toString());
+
+        // Disable input and buttons
+        if (urlInput) urlInput.disabled = true;
+        if (fetchBtn) fetchBtn.disabled = true;
+        if (downloadBtn) downloadBtn.disabled = true;
+    }
+}
+
+function hideBlockedModal() {
+    if (blockedModal) {
+        blockedModal.classList.remove('show');
+    }
+}
+
+function checkBlockedStatus() {
+    const blockedUntil = localStorage.getItem('ytgrab_blocked_until');
+    if (blockedUntil) {
+        const unblockTime = parseInt(blockedUntil);
+        const now = Date.now();
+
+        if (now < unblockTime) {
+            // Still blocked
+            const remainingMinutes = Math.ceil((unblockTime - now) / 60000);
+            isUserBlocked = true;
+
+            // Disable inputs
+            if (urlInput) urlInput.disabled = true;
+            if (fetchBtn) fetchBtn.disabled = true;
+            if (downloadBtn) downloadBtn.disabled = true;
+
+            // Show modal after a brief delay
+            setTimeout(() => showBlockedModal(remainingMinutes), 500);
+        } else {
+            // Block expired, clear it
+            localStorage.removeItem('ytgrab_blocked_until');
+            isUserBlocked = false;
+        }
+    }
+}
+
+// Handle 429 (blocked) responses
+function handleBlockedResponse(data) {
+    const remainingMinutes = data.remainingMinutes || 60;
+    showBlockedModal(remainingMinutes);
 }
 
 // ============================================

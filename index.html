@@ -242,6 +242,32 @@
             </div>
         </section>
 
+        <!-- Blocked User Popup Modal -->
+        <div class="blocked-modal-overlay" id="blockedModal">
+            <div class="blocked-modal">
+                <div class="blocked-modal-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                        <path d="M4.93 4.93L19.07 19.07" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" />
+                    </svg>
+                </div>
+                <h2 class="blocked-modal-title">Access Temporarily Blocked</h2>
+                <p class="blocked-modal-message">You have been temporarily blocked due to suspicious activity or too
+                    many requests in a short time.</p>
+                <div class="blocked-modal-timer">
+                    <span class="timer-icon">⏱️</span>
+                    <span class="timer-text">Please try again in <strong id="blockedTimeRemaining">60</strong>
+                        minutes</span>
+                </div>
+                <div class="blocked-modal-info">
+                    <p>This is an automatic security measure to protect our service. If you believe this is an error,
+                        please wait for the block to expire.</p>
+                </div>
+                <button class="blocked-modal-close" id="blockedModalClose">I Understand</button>
+            </div>
+        </div>
+
         <!-- Features Section -->
         <section class="features" id="features">
             <div class="container">
