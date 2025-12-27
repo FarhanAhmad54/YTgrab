@@ -13,5 +13,4 @@ Disallow: /api/
 Disallow: /admin.html
 
 # Sitemap location
-Sitemap: https://ytgrab.netlify.app/sitemap.xml
-
+Sitemap: https://ytgrab-xi07.onrender.com/sitemap.xml
